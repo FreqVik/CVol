@@ -1,0 +1,6 @@
+fastapi
+pandas
+uvicorn
+sqlalchemy
+ccxt
+joblib

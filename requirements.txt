@@ -1,0 +1,5 @@
+ccxt
+pandas
+arch
+matplotlib
+scikit-learn
