@@ -20,13 +20,13 @@ class ChartService:
         ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
         return self._sanitize_ohlcv(ohlcv)
 
-    def get_or_create_dataframe(self, symbol='BTC/USDT', timeframe='4h', limit=100):
+    def get_or_create_dataframe(self, symbol='BTC/USDT', timeframe='1h', limit=100):
         key = self._frame_key(symbol, timeframe)
         if key not in self._frames:
             self._frames[key] = self.fetch_data(symbol=symbol, timeframe=timeframe, limit=limit)
         return self._frames[key]
 
-    def append_new_data(self, symbol='BTC/USDT', timeframe='4h', fetch_limit=10):
+    def append_new_data(self, symbol='BTC/USDT', timeframe='1h', fetch_limit=10):
         key = self._frame_key(symbol, timeframe)
         current_df = self.get_or_create_dataframe(symbol=symbol, timeframe=timeframe, limit=fetch_limit)
 

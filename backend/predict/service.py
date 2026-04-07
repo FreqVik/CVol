@@ -25,7 +25,7 @@ class Predictor:
         self.model = self.load_model()
 
     def load_model(self):
-        model_path = os.path.join(str(self.model_dir), 'garch_model.pkl')
+        model_path = os.path.join(str(self.model_dir), 'garch_btcusdt_1h.pkl')
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}")
         return joblib.load(model_path)
