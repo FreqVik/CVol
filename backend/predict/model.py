@@ -1,6 +1,7 @@
 from pathlib import Path
+from datetime import datetime
 
-from sqlalchemy import Float, Integer, String, create_engine
+from sqlalchemy import DateTime, Float, Integer, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -16,9 +17,17 @@ class Prediction(Base):
     __tablename__ = 'predictions'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    prediction_time: Mapped[str] = mapped_column(String, nullable=False)
+    prediction_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     predicted_volatility: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "prediction_time": self.prediction_time.isoformat() if self.prediction_time else None,
+            "predicted_volatility": self.predicted_volatility,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 def _database_url(db_path: Path) -> str:
