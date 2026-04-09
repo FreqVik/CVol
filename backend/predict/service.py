@@ -1,6 +1,7 @@
 import joblib
 import os
 import logging
+import pickle
 import pandas as pd
 import numpy as np
 import threading
@@ -38,24 +39,33 @@ class Predictor:
         self.SessionLocal = get_prediction_session_factory(self.db_path)
         self.model = self.load_model()
         self._model_lock = threading.Lock()  # Protect concurrent model access during retraining
+        
+        if self.model is None:
+            logger.warning("⚠ Model is None (pickle incompatible or missing). Will be trained on startup with chart data.")
+        
         logger.info(f"✓ Predictor initialized successfully")
 
     def load_model(self):
-        """Load GARCH model from pickle file"""
+        """Load GARCH model from pickle file with cross-version compatibility"""
         model_path = self.model_dir / 'garch_btcusdt_1h.pkl'
         logger.debug(f"Loading model from {model_path}")
         
         if not model_path.exists():
-            logger.error(f"Model file not found: {model_path}")
-            raise FileNotFoundError(f"Model file not found at {model_path}")
+            logger.warning(f"Model file not found: {model_path}. Will be trained on startup.")
+            return None
         
         try:
             model = joblib.load(model_path)
             logger.info(f"✓ Model loaded successfully from {model_path}")
             return model
+        except (NotImplementedError, AttributeError, TypeError, pickle.UnpicklingError) as e:
+            # Cross-version pickle compatibility error (Python version, pandas version, etc.)
+            logger.warning(f"⚠ Model pickle incompatible (likely Python/library version mismatch): {type(e).__name__}")
+            logger.info("Will retrain model from fresh data on startup")
+            return None
         except Exception as e:
-            logger.error(f"Failed to load model: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Unexpected error loading model: {str(e)}", exc_info=True)
+            return None
 
     def retrain_model(self, realized_volatility_series):
         """Retrain GARCH model with new realized volatility data and save"""
@@ -92,8 +102,8 @@ class Predictor:
     def predict_volatility(self):
         """Generate next-step volatility prediction and save to database"""
         if self.model is None:
-            logger.error("Model is not loaded")
-            raise ValueError("Model is not loaded.")
+            logger.error("Model not available - still being trained on startup")
+            raise ValueError("Model not available. This typically happens on first startup - wait for model retraining to complete.")
         
         try:
             logger.debug("Generating volatility prediction...")

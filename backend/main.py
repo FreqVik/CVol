@@ -33,7 +33,25 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Validating predictor model...")
         predictor = get_predictor()
-        logger.info(f"✓ Predictor model loaded and validated")
+        
+        # If model is None (pickle incompatible or missing), retrain from chart data
+        if predictor.model is None:
+            logger.warning("⚠ Model is None - attempting to retrain from chart data...")
+            try:
+                df_chart = chart_service.get_data(symbol='BTC/USDT', timeframe='1h')
+                if len(df_chart) >= 20:
+                    realized_vol = df_chart['realized_vol'].dropna()
+                    success = predictor.retrain_model(realized_vol)
+                    if success:
+                        logger.info("✓ Model retrained from chart data")
+                    else:
+                        logger.error("Failed to retrain model from chart data")
+                else:
+                    logger.error("Insufficient chart data to retrain model")
+            except Exception as retrain_error:
+                logger.error(f"Failed to retrain model: {str(retrain_error)}", exc_info=True)
+        else:
+            logger.info("✓ Predictor model loaded and validated")
     except Exception as e:
         logger.error(f"✗ Failed to load predictor model: {str(e)}", exc_info=True)
         predictor = None
