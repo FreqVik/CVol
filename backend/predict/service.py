@@ -81,8 +81,8 @@ class Predictor:
             # Prepare returns data (realized_volatility_series should already be returns-like)
             data = realized_volatility_series.copy()
             
-            # Fit new GARCH model
-            model_fit = arch_model(data * 100, vol='Garch', p=1, q=1).fit(disp='off')
+            # Fit new GARCH model with explicit parameters to match notebook
+            model_fit = arch_model(data * 100, vol='Garch', p=1, q=1, rescale=False).fit(disp='off')
             
             # Save new model
             model_path = self.model_dir / 'garch_btcusdt_1h.pkl'
