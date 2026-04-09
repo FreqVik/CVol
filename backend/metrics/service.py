@@ -291,31 +291,31 @@ class MetricsService:
             raise
 
     def _trigger_model_retrain(self, symbol='BTC/USDT', timeframe='1h'):
-        """Trigger GARCH model retraining with latest realized volatility data"""
+        """Trigger GARCH model retraining with latest returns data"""
         try:
             logger.info(f"Triggering model retrain with latest {symbol} {timeframe} data...")
             
             # Get latest chart data
             df_chart = self.chart_service.get_data(symbol=symbol, timeframe=timeframe)
             
-            if df_chart.empty or 'realized_vol' not in df_chart.columns:
-                logger.warning("No realized volatility data available for model retraining")
+            if df_chart.empty or 'returns' not in df_chart.columns:
+                logger.warning("No returns data available for model retraining")
                 return False
             
-            # Extract realized volatility as returns-like series (all non-null values)
-            realized_vol_series = df_chart['realized_vol'].dropna()
+            # Extract returns (NOT realized_vol) - GARCH needs raw returns, not pre-computed volatility
+            returns_series = df_chart['returns'].dropna()
             
-            if len(realized_vol_series) < 20:
-                logger.warning(f"Insufficient data for retraining: {len(realized_vol_series)} points")
+            if len(returns_series) < 20:
+                logger.warning(f"Insufficient data for retraining: {len(returns_series)} points")
                 return False
             
-            # Import predictor and retrain
+            # Import predictor and retrain with returns data
             from predict.service import get_predictor
             predictor = get_predictor()
             
-            success = predictor.retrain_model(realized_vol_series)
+            success = predictor.retrain_model(returns_series)
             if success:
-                logger.info(f"✓ Model retrained successfully with {len(realized_vol_series)} data points")
+                logger.info(f"✓ Model retrained successfully with {len(returns_series)} returns data points")
             else:
                 logger.warning("Model retraining failed or skipped")
             

@@ -67,19 +67,24 @@ class Predictor:
             logger.error(f"Unexpected error loading model: {str(e)}", exc_info=True)
             return None
 
-    def retrain_model(self, realized_volatility_series):
-        """Retrain GARCH model with new realized volatility data and save"""
+    def retrain_model(self, returns_series):
+        """Retrain GARCH model with raw returns data (NOT volatility)
+        
+        Args:
+            returns_series: pandas Series of raw returns (e.g., from df['returns']), NOT pre-computed volatility
+        """
         try:
             from arch import arch_model
             
-            if realized_volatility_series is None or len(realized_volatility_series) < 20:
-                logger.warning(f"Insufficient data for retraining: {len(realized_volatility_series) if realized_volatility_series is not None else 0} points")
+            if returns_series is None or len(returns_series) < 20:
+                logger.warning(f"Insufficient data for retraining: {len(returns_series) if returns_series is not None else 0} points")
                 return False
             
-            logger.info(f"Retraining GARCH model with {len(realized_volatility_series)} data points...")
+            logger.info(f"Retraining GARCH model with {len(returns_series)} returns data points...")
             
-            # Prepare returns data (realized_volatility_series should already be returns-like)
-            data = realized_volatility_series.copy()
+            # IMPORTANT: We receive raw returns (e.g., 0.0028, 0.0036, ...)
+            # Scale by 100 before fitting to convert to percentage scale (GARCH convention)
+            data = returns_series.copy()
             
             # Fit new GARCH model with explicit parameters to match notebook
             model_fit = arch_model(data * 100, vol='Garch', p=1, q=1, rescale=False).fit(disp='off')
@@ -112,10 +117,14 @@ class Predictor:
             # Forecast next step with lock (model could be retraining in background)
             with self._model_lock:
                 forecast = self.model.forecast(horizon=1)
-                # Convert conditional variance to volatility (std = sqrt(variance))
-                # Model was trained on data*100 (percentage scale), so divide by 100 to convert back to decimal
+                # Model was trained on data*100 (percentage scale)
+                # Forecast variance is in units of (100*returns)^2 = (10000*returns^2)
+                # Convert back to decimal scale: divide by 10000, then sqrt
                 conditional_variance = float(forecast.variance.values[-1, 0])
-                predicted_volatility = np.sqrt(conditional_variance) / 100.0
+                # This matches notebook formula: pred_var = var/(100^2), then pred_vol = sqrt(pred_var)
+                predicted_volatility = np.sqrt(conditional_variance / 10000.0)
+                
+                logger.debug(f"Forecast variance (raw): {conditional_variance:.8f}, converted vol: {predicted_volatility:.8f}")
             
             logger.debug(f"Forecast generated: volatility={predicted_volatility:.6f}")
             

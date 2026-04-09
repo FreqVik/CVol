@@ -1,5 +1,6 @@
 import logging
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from chart.route import router as chart_router, chart_service
@@ -90,6 +91,15 @@ async def lifespan(app: FastAPI):
     logger.info("✓ Shutdown complete")
 
 app = FastAPI(title='CVol Backend', version='0.1.0', lifespan=lifespan)
+
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (change to specific domains in production)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 
 @app.get('/')
