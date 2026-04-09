@@ -124,7 +124,7 @@ class Predictor:
                 # This matches notebook formula: pred_var = var/(100^2), then pred_vol = sqrt(pred_var)
                 predicted_volatility = np.sqrt(conditional_variance / 10000.0)
                 
-                logger.debug(f"Forecast variance (raw): {conditional_variance:.8f}, converted vol: {predicted_volatility:.8f}")
+                logger.info(f"Forecast: raw_variance={conditional_variance:.6f}, scaled_volatility={predicted_volatility:.6f}")
             
             logger.debug(f"Forecast generated: volatility={predicted_volatility:.6f}")
             

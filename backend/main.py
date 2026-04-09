@@ -41,10 +41,11 @@ async def lifespan(app: FastAPI):
             try:
                 df_chart = chart_service.get_data(symbol='BTC/USDT', timeframe='1h')
                 if len(df_chart) >= 20:
-                    realized_vol = df_chart['realized_vol'].dropna()
-                    success = predictor.retrain_model(realized_vol)
+                    # Use raw returns (NOT realized_vol) for GARCH training
+                    returns_series = df_chart['returns'].dropna()
+                    success = predictor.retrain_model(returns_series)
                     if success:
-                        logger.info("✓ Model retrained from chart data")
+                        logger.info("✓ Model retrained from chart data on startup")
                     else:
                         logger.error("Failed to retrain model from chart data")
                 else:
@@ -53,6 +54,19 @@ async def lifespan(app: FastAPI):
                 logger.error(f"Failed to retrain model: {str(retrain_error)}", exc_info=True)
         else:
             logger.info("✓ Predictor model loaded and validated")
+            # Even if model loaded, retrain with latest data on startup for fresh start
+            try:
+                logger.info("Retraining model with latest data on startup...")
+                df_chart = chart_service.get_data(symbol='BTC/USDT', timeframe='1h')
+                if len(df_chart) >= 20:
+                    returns_series = df_chart['returns'].dropna()
+                    success = predictor.retrain_model(returns_series)
+                    if success:
+                        logger.info("✓ Model retrained with latest data on startup")
+                    else:
+                        logger.warning("Model retrain with latest data was skipped")
+            except Exception as retrain_error:
+                logger.warning(f"Could not retrain model on startup (non-fatal): {str(retrain_error)}")
     except Exception as e:
         logger.error(f"✗ Failed to load predictor model: {str(e)}", exc_info=True)
         predictor = None
