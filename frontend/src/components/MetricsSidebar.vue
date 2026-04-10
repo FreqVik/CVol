@@ -131,11 +131,11 @@ const loadPrediction = async () => {
     console.log('📥 Loading prediction...')
     const response = await api.getLatestPrediction()
     
-    // Only save last value if we already have a prediction
-    // (don't set on first load, so change stays at 0)
+    // Save current prediction as last value BEFORE updating
     if (prediction.value) {
       lastPredictionValue.value = prediction.value.predicted_volatility
-      console.log('💾 Saved old prediction:', lastPredictionValue.value)
+      localStorage.setItem('lastPredictionValue', lastPredictionValue.value)
+      console.log('💾 Saved old prediction to localStorage:', lastPredictionValue.value)
     }
     
     prediction.value = response.data
@@ -220,6 +220,14 @@ const setupAutoRefresh = () => {
 
 onMounted(() => {
   console.log('📌 MetricsSidebar mounted')
+  
+  // Load saved prediction value from localStorage
+  const saved = localStorage.getItem('lastPredictionValue')
+  if (saved) {
+    lastPredictionValue.value = parseFloat(saved)
+    console.log('💾 Restored saved prediction value from localStorage:', lastPredictionValue.value)
+  }
+  
   loadPrediction()
   loadMetrics()
   setupAutoRefresh()
