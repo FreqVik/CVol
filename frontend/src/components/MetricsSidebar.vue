@@ -129,10 +129,17 @@ const loadPrediction = async () => {
   error.value = ''
   try {
     const response = await api.getLatestPrediction()
-    if (lastPredictionValue.value === null) {
+    
+    // Save the old value before updating (for change calculation)
+    if (prediction.value) {
+      lastPredictionValue.value = prediction.value.predicted_volatility
+    } else {
       lastPredictionValue.value = response.data.predicted_volatility
     }
+    
+    // Update to new prediction
     prediction.value = response.data
+    console.log('✓ Prediction refreshed:', prediction.value.predicted_volatility)
   } catch (err) {
     if (err.response?.status !== 404) {
       error.value = 'Failed to load prediction'

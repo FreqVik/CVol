@@ -67,6 +67,9 @@ const chartData = ref([])
 const prediction = ref(null)
 const dataPoints = ref(30)
 
+let autoRefreshTimer = null
+const AUTO_REFRESH_INTERVAL = 300000  // 5 minutes
+
 watch(dataPoints, () => {
   if (chartData.value.length > 0) {
     renderChart()
@@ -291,14 +294,40 @@ const refreshChart = async () => {
   await loadChartData()
 }
 
+const updatePredictionOnly = async () => {
+  try {
+    const predResponse = await api.getLatestPrediction()
+    prediction.value = predResponse.data
+    console.log('✓ Prediction auto-updated:', prediction.value.predicted_volatility)
+    
+    // Re-render chart with new prediction
+    if (chartData.value.length > 0) {
+      renderChart()
+    }
+  } catch (e) {
+    console.log('ℹ️  Could not update prediction:', e.message)
+  }
+}
+
+const setupAutoRefresh = () => {
+  autoRefreshTimer = setInterval(async () => {
+    console.log('🔄 Auto-refreshing prediction...')
+    await updatePredictionOnly()
+  }, AUTO_REFRESH_INTERVAL)
+}
+
 onMounted(() => {
   console.log('📦 VolatilityChart component mounted')
   loadChartData()
+  setupAutoRefresh()
 })
 
 onBeforeUnmount(() => {
   if (chart.value) {
     chart.value.destroy()
+  }
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer)
   }
 })
 </script>
