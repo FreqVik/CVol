@@ -128,18 +128,19 @@ const loadPrediction = async () => {
   loadingPrediction.value = true
   error.value = ''
   try {
+    console.log('📥 Loading prediction...')
     const response = await api.getLatestPrediction()
     
-    // Save the old value before updating (for change calculation)
+    // Only save last value if we already have a prediction
+    // (don't set on first load, so change stays at 0)
     if (prediction.value) {
       lastPredictionValue.value = prediction.value.predicted_volatility
-    } else {
-      lastPredictionValue.value = response.data.predicted_volatility
+      console.log('💾 Saved old prediction:', lastPredictionValue.value)
     }
     
-    // Update to new prediction
     prediction.value = response.data
-    console.log('✓ Prediction refreshed:', prediction.value.predicted_volatility)
+    console.log('✓ Prediction loaded:', response.data.predicted_volatility)
+    console.log('📊 Change:', ((response.data.predicted_volatility - (lastPredictionValue.value || response.data.predicted_volatility)) / (lastPredictionValue.value || response.data.predicted_volatility) * 100).toFixed(2) + '%')
   } catch (err) {
     if (err.response?.status !== 404) {
       error.value = 'Failed to load prediction'
@@ -200,18 +201,25 @@ const refreshMetrics = async () => {
 }
 
 const setupAutoRefresh = () => {
+  console.log('⏱️  Setting up auto-refresh every', refreshInterval.value / 1000 / 60, 'minutes')
+  
   // Auto-refresh metrics
   metricsRefreshTimer = setInterval(() => {
+    console.log('🔄 Auto-refreshing metrics...')
     loadMetrics()
   }, refreshInterval.value)
 
   // Auto-refresh prediction
   predictionRefreshTimer = setInterval(() => {
+    console.log('🔄 Auto-refreshing prediction...')
     loadPrediction()
   }, refreshInterval.value)
+  
+  console.log('✓ Auto-refresh timers started')
 }
 
 onMounted(() => {
+  console.log('📌 MetricsSidebar mounted')
   loadPrediction()
   loadMetrics()
   setupAutoRefresh()
@@ -220,5 +228,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (metricsRefreshTimer) clearInterval(metricsRefreshTimer)
   if (predictionRefreshTimer) clearInterval(predictionRefreshTimer)
+  console.log('🛑 Auto-refresh timers cleared')
 })
 </script>
