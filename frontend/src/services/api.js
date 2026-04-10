@@ -19,7 +19,7 @@ export default {
 
   // Prediction endpoints
   generatePrediction() {
-    return api.post('/predict', {})
+    return api.post('/predict/predict', {})
   },
 
   getLatestPrediction() {
